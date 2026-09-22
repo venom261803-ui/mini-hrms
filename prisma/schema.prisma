@@ -1,0 +1,119 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  HR_ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
+  ANNUAL
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(EMPLOYEE)
+  employeeId   String    @unique
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Employee {
+  id             String           @id @default(uuid())
+  employeeCode   String           @unique
+  fullName       String
+  email          String           @unique
+  phone          String
+  department     String
+  designation    String
+  joiningDate    DateTime
+  status         EmploymentStatus @default(ACTIVE)
+  
+  // Self-referential relation for Manager -> Subordinates
+  managerId      String?
+  manager        Employee?        @relation("ManagerSubordinates", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates   Employee[]       @relation("ManagerSubordinates")
+  
+  // Relations
+  user           User?
+  attendances    Attendance[]
+  leaveRequests  LeaveRequest[]   @relation("EmployeeLeaveRequests")
+  reviewedLeaves LeaveRequest[]   @relation("ReviewedLeaveRequests")
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([managerId])
+  @@index([department])
+  @@index([status])
+}
+
+model Attendance {
+  id         String           @id @default(uuid())
+  employeeId String
+  employee   Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime         // Store normalized IST start-of-day date (00:00:00 UTC)
+  checkIn    DateTime?
+  checkOut   DateTime?
+  status     AttendanceStatus @default(PRESENT)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  // Unique constraint ensures max 1 attendance record per employee per calendar date
+  @@unique([employeeId, date])
+  @@index([employeeId, date])
+}
+
+model LeaveRequest {
+  id              String      @id @default(uuid())
+  employeeId      String
+  employee        Employee    @relation("EmployeeLeaveRequests", fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType       LeaveType   @default(CASUAL)
+  startDate       DateTime
+  endDate         DateTime
+  reason          String
+  status          LeaveStatus @default(PENDING)
+  rejectionReason String?
+  
+  reviewedById    String?
+  reviewedBy      Employee?   @relation("ReviewedLeaveRequests", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([startDate, endDate])
+}

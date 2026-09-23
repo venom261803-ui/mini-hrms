@@ -10,14 +10,20 @@ export async function GET(request: Request) {
     // 1. Authenticate user & assert active employment status
     const session = await requireAuth();
 
-    // 2. Parse query parameters
+    // 2. Parse and sanitize query parameters
     const { searchParams } = new URL(request.url);
+
+    const getParam = (key: string) => {
+      const val = searchParams.get(key)?.trim();
+      return val && val !== '' && val !== 'ALL' && val !== 'undefined' && val !== 'null' ? val : undefined;
+    };
+
     const rawQueryParams = {
-      employeeId: searchParams.get('employeeId') || undefined,
-      date: searchParams.get('date') || undefined,
-      fromDate: searchParams.get('fromDate') || undefined,
-      toDate: searchParams.get('toDate') || undefined,
-      status: searchParams.get('status') as AttendanceStatus | undefined,
+      employeeId: getParam('employeeId'),
+      date: getParam('date'),
+      fromDate: getParam('fromDate'),
+      toDate: getParam('toDate'),
+      status: getParam('status') as AttendanceStatus | undefined,
     };
 
     const validationResult = attendanceFilterSchema.safeParse(rawQueryParams);

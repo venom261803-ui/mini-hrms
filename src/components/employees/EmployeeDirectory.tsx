@@ -265,7 +265,7 @@ export default function EmployeeDirectory({ session }: EmployeeDirectoryProps) {
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 text-slate-400 mb-3">
                 <Search className="h-6 w-6" />
               </div>
-              <h3 className="text-md font-semibold text-white">No employees match your search</h3>
+              <h3 className="text-md font-semibold text-white">No employees found</h3>
               <p className="text-xs text-slate-400 mt-1">
                 Try adjusting your search keywords or clearing active filters.
               </p>
